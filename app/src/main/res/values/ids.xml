@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="tv_drag_handler" type="id">tv_drag_handler</item>
+</resources>
