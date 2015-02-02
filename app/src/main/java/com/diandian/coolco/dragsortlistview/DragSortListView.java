@@ -48,6 +48,15 @@ public class DragSortListView extends ListView {
      */
     private View draggingItemView;
 
+    /**
+     * when user's finger is up to this boundary, scroll down the ListView
+     */
+    private float scrollDownBoundary;
+    /**
+     * when user's finger is below to this boundary, scroll up the ListView
+     */
+    private float scrollUpBoundary;
+
 
     public DragSortListView(Context context) {
         super(context);
@@ -59,6 +68,20 @@ public class DragSortListView extends ListView {
 
     public DragSortListView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int l, int t, int r, int b) {
+        super.onLayout(changed, l, t, r, b);
+        init();
+    }
+
+    private void init() {
+        scrollDownBoundary = getHeight() * 0.25f;
+        scrollUpBoundary = getHeight() * 0.75f;
+
+        draggingItemViewBitmapPaint = new Paint();
+        draggingItemViewBitmapPaint.setAlpha(0x88);
     }
 
     @Override
@@ -131,9 +154,10 @@ public class DragSortListView extends ListView {
 //        underFingerItemView.getHitRect(underFingerItemViewDrawingRect); the same as up one, the same coordinate , the same size
         draggingItemViewRect = new RectF();
         draggingItemViewRect.set(draggingItemView.getLeft(), draggingItemView.getTop(), draggingItemView.getRight(), draggingItemView.getBottom());
-        draggingItemViewBitmapPaint = new Paint();
+
 
         srcPosition = downPosition;
+        ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(srcPosition);
 
         draggingItemView.setVisibility(INVISIBLE);
 
@@ -152,6 +176,49 @@ public class DragSortListView extends ListView {
 
         // redraw
         invalidate();
+
+        scrollListView(currY);
+//        scrollListBy();
+//        smoothScrollBy();
+
+//        reorderListView(ev);
+
+        //reorder ListView
+        int currPosition = pointToPosition(((int) ev.getX()), ((int) ev.getY()));
+        if (currPosition == AdapterView.INVALID_POSITION || currPosition == srcPosition){
+            return;
+        }
+        ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(currPosition);
+        ((CommonDragSortAdapter) getAdapter()).moveItem(srcPosition, currPosition);
+        srcPosition = currPosition;
+    }
+
+    private void scrollListView(float y) {
+        //the distance you want to scroll ListView
+        float dy = 0;
+        if (y < scrollDownBoundary){
+            dy = (scrollDownBoundary-y) / 10;
+        } else if (y > scrollUpBoundary){
+            dy = (scrollUpBoundary-y) / 10;
+        }
+
+        if (dy == 0){
+            return;
+        }
+
+        //scroll down
+        if (dy > 0){
+            View firstVisibleItemView = getChildAt(0);
+            setSelectionFromTop(getFirstVisiblePosition(), ((int) (firstVisibleItemView.getTop() + dy)));
+            return;
+        }
+
+        //scroll up
+        if (dy < 0){
+            View lastVisibleItemView = getChildAt(getLastVisiblePosition()-getFirstVisiblePosition()-1);
+            setSelectionFromTop(getLastVisiblePosition(), ((int) (lastVisibleItemView.getTop() + dy)));
+            return;
+        }
     }
 
 
@@ -163,13 +230,42 @@ public class DragSortListView extends ListView {
         draggingItemView.setVisibility(VISIBLE);
         draggingItemView = null;
 
-        // reorder
-        int upPosition = pointToPosition(((int) ev.getX()), ((int) ev.getY()));
-        int dstPosition = upPosition;
-        if (upPosition == AdapterView.INVALID_POSITION){
+//        reorderListView(ev);
+        //reorder ListView
+        int currPosition = pointToPosition(((int) ev.getX()), ((int) ev.getY()));
+        int dstPosition = currPosition;
+        if (currPosition == AdapterView.INVALID_POSITION){
             dstPosition = srcPosition;
         }
+        ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(-1);
+
+        //move item even if srcPosition equals with dstPosition, because we want to refresh ListView
         ((CommonDragSortAdapter) getAdapter()).moveItem(srcPosition, dstPosition);
+        srcPosition = -1;
+    }
+
+    private void reorderListView(MotionEvent ev) {
+        // reorder
+        int currPosition = pointToPosition(((int) ev.getX()), ((int) ev.getY()));
+        if (currPosition == AdapterView.INVALID_POSITION){
+//            dstPosition = srcPosition;
+            return;
+        }
+//        int dstPosition = currPosition;
+        if (ev.getAction() == MotionEvent.ACTION_MOVE) {
+            if (currPosition == srcPosition){
+                return;
+            }
+            ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(currPosition);
+            ((CommonDragSortAdapter) getAdapter()).moveItem(srcPosition, currPosition);
+            srcPosition = currPosition;
+        } else {
+            //ACTION_UP
+            ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(-1);
+            ((CommonDragSortAdapter) getAdapter()).moveItem(srcPosition, currPosition);
+            srcPosition = -1;
+//            invalidate();
+        }
     }
 
 
