@@ -9,17 +9,13 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
-import android.widget.ScrollView;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class DragSortListView extends ListView {
 
@@ -47,7 +43,7 @@ public class DragSortListView extends ListView {
     /**
      * the original position of the draggingItemView
      */
-    private int srcPosition;
+    private int emptyPosition;
     /**
      * the flag that indicate whether we are dragging some item view
      */
@@ -65,11 +61,10 @@ public class DragSortListView extends ListView {
      * when user's finger is below to this boundary, scroll up the ListView
      */
     private float scrollUpBoundary;
-    private int itemDeltaY;
+    private int draggingItemHeight;
     private ValueAnimator itemAnimator;
     private long duration = 300;
     private List<View> needMoveItems;
-    private Map<View, Float> needMoveItemsOriginalTranslationY;
 
 
     public DragSortListView(Context context) {
@@ -78,7 +73,6 @@ public class DragSortListView extends ListView {
 
     public DragSortListView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        ScrollView
     }
 
     public DragSortListView(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -101,7 +95,6 @@ public class DragSortListView extends ListView {
         setLayerType(View.LAYER_TYPE_HARDWARE, null);//硬件加速
 
         needMoveItems = new ArrayList<View>();
-        needMoveItemsOriginalTranslationY = new HashMap<View, Float>();
     }
 
     @Override
@@ -144,7 +137,6 @@ public class DragSortListView extends ListView {
         // check whether user's finger pressed on the drag handler
         View dragHandler = underFingerItemView.findViewById(R.id.tv_drag_handler);
         if (dragHandler == null) {
-
             // if the under item view don't have a drag handler, don't start drag
             return false;
         }
@@ -176,13 +168,12 @@ public class DragSortListView extends ListView {
         draggingItemViewRect.set(draggingItemView.getLeft(), draggingItemView.getTop(), draggingItemView.getRight(), draggingItemView.getBottom());
 
 
-        srcPosition = downPosition;
-        ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(srcPosition);
+        emptyPosition = downPosition;
+        ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(emptyPosition);
 
         draggingItemView.setVisibility(INVISIBLE);
 
-        //92
-        itemDeltaY = draggingItemView.getMeasuredHeight();
+        draggingItemHeight = draggingItemView.getMeasuredHeight();
 
         invalidate();
 
@@ -202,128 +193,69 @@ public class DragSortListView extends ListView {
 
         // wait item moving ends
         if (itemAnimator != null) {
-            Log.e("", "itemAnimator != null");
             return;
         }
 
         if (scrollListViewIfNeeded(currY)) {//don't move item when the ListView is scrolling
-            Log.e("", "scrollListView");
             return;
         }
-//        scrollListViewIfNeeded(currY);
-//        scrollListBy();
-//        smoothScrollBy();
-
-//        reorderListView(ev);
 
         //reorder ListView
-        final int currPosition = pointToPosition(((int) ev.getX()), ((int) ev.getY()));
+        final int curPosition = pointToPosition(((int) ev.getX()), ((int) ev.getY()));
 
-        if (currPosition == AdapterView.INVALID_POSITION || currPosition == srcPosition) {
-            Log.e("", "currPosition == AdapterView.INVALID_POSITION || currPosition == srcPosition  " + currPosition + " "+ srcPosition);
-            for (int i = 0; i < getChildCount(); i++) {
-                Rect outRect = new Rect();
-                getChildAt(i).getHitRect(outRect);
-                Log.e("", i + "  " + outRect.toString());
-            }
+        if (curPosition == AdapterView.INVALID_POSITION || curPosition == emptyPosition) {
             return;
         }
 
-        moveItem(currPosition, false);
+        moveItems(emptyPosition, curPosition, false);
     }
 
-    private void initNeedMoveItems(int srcPosition, int currPosition) {
+    /**
+     * figure which item need move when empty position change from old to new
+     *
+     * @param oldEmptyPosition
+     * @param newEmptyPosition
+     */
+    private void initNeedMoveItems(int oldEmptyPosition, int newEmptyPosition) {
         needMoveItems.clear();
-        needMoveItemsOriginalTranslationY.clear();
 
-        Log.e("", "srcPosition : " + srcPosition + "    currentPostion : " + currPosition);
-        if (currPosition > srcPosition) {
-            for (int i = srcPosition + 1; i <= currPosition; i++) {
-                addNeedMoveItemInfo(i);
+
+        if (newEmptyPosition > oldEmptyPosition) {
+            for (int i = oldEmptyPosition + 1; i <= newEmptyPosition; i++) {
+                needMoveItems.add(getChildAt(i - getFirstVisiblePosition()));
             }
         } else {
-            for (int i = currPosition; i < srcPosition; i++) {
-                addNeedMoveItemInfo(i);
+            for (int i = newEmptyPosition; i < oldEmptyPosition; i++) {
+                needMoveItems.add(getChildAt(i - getFirstVisiblePosition()));
             }
         }
 
-/*
-
-        int beg, end;//为了遍历方便，但不好理解了。
-        if (srcPosition < currPosition){
-            beg = srcPosition + 1;
-            end = currPosition + 1;
-        } else {
-            beg = currPosition;
-            end = srcPosition;
-        }
-
-        for (int i = beg; i < end; i++) {
-            addNeedMoveItemInfo(i);
-        }
-
-*/
     }
 
-    private void addNeedMoveItemInfo(int i) {
-        View needMoveItem = findViewWithTag(i);
-        if (needMoveItem != null) {
-            Log.e("", "find item at position" + i);
-            needMoveItems.add(needMoveItem);
-            needMoveItemsOriginalTranslationY.put(needMoveItem, needMoveItem.getTranslationY());
-        } else {
-            Log.e("", "cann't find item at position" + i);
-        }
-    }
+    /**
+     * move items to make empty position change from old to new, reset will be true if this method get called by handleUpEvent
+     *
+     * @param oldEmptyPosition
+     * @param newEmptyPosition
+     * @param reset
+     */
+    private void moveItems(final int oldEmptyPosition, final int newEmptyPosition, final boolean reset) {
 
-    private void moveItem(final int currPosition, final boolean reset) {
-        Log.e("", "moveItem");
-        if (currPosition == srcPosition) {
-
-            Log.e("", "currPosition == srcPosition");
-            itemMovementEnd(currPosition, reset);
-
+        if (newEmptyPosition == oldEmptyPosition) {
+            itemMovementEnd(oldEmptyPosition, newEmptyPosition, reset);
             return;
         }
 
-        initNeedMoveItems(srcPosition, currPosition);
+        initNeedMoveItems(oldEmptyPosition, newEmptyPosition);
 
-        itemAnimator = currPosition > srcPosition ? ValueAnimator.ofFloat(0, -itemDeltaY) : ValueAnimator.ofFloat(0, itemDeltaY);//currPosition > srcPosition则向上移动itemView
+        itemAnimator = newEmptyPosition > oldEmptyPosition ? ValueAnimator.ofFloat(0, -draggingItemHeight) : ValueAnimator.ofFloat(0, draggingItemHeight);//currPosition > srcPosition则向上移动itemView
         itemAnimator.setDuration(duration);
         itemAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator valueAnimator) {
-                //我们已经确定好了哪些itemView需要移动，循环移动它们
                 for (View needMoveItem : needMoveItems) {
-                    float originalTranslationY = needMoveItemsOriginalTranslationY.get(needMoveItem);
-                    needMoveItem.setTranslationY(originalTranslationY + ((Float) valueAnimator.getAnimatedValue()));
+                    needMoveItem.setTranslationY((Float) valueAnimator.getAnimatedValue());
                 }
-/*
-
-                if (currPosition < srcPosition) {//move item(s) down
-                    for (int i = currPosition; i < srcPosition; i++) {
-                        View itemView = getChildAt(i - getFirstVisiblePosition());
-                        View itemAtIPos = findViewWithTag(i);
-                        if (itemAtIPos != null){
-
-                        } else {
-                            Log.e("", "itemAtIPos == null");
-                        }
-                        if (itemView != null) {
-                            itemView.setTranslationY((Float) valueAnimator.getAnimatedValue());
-                        }
-                    }
-                } else {//move item(s) up
-                    for (int i = srcPosition + 1; i <= currPosition; i++) {
-                        View itemView = getChildAt(i - getFirstVisiblePosition());
-                        if (itemView != null) {
-                            itemView.setTranslationY(-(Float) valueAnimator.getAnimatedValue());
-                        }
-                    }
-                }
-
-*/
-
             }
         });
         itemAnimator.addListener(new Animator.AnimatorListener() {
@@ -334,12 +266,12 @@ public class DragSortListView extends ListView {
 
             @Override
             public void onAnimationEnd(Animator animator) {
-                itemMovementEnd(currPosition, reset);
+                itemMovementEnd(oldEmptyPosition, newEmptyPosition, reset);
             }
 
             @Override
             public void onAnimationCancel(Animator animator) {
-                itemMovementEnd(currPosition, reset);
+                itemMovementEnd(oldEmptyPosition, newEmptyPosition, reset);
             }
 
             @Override
@@ -350,42 +282,29 @@ public class DragSortListView extends ListView {
         itemAnimator.start();
     }
 
-    private void itemMovementEnd(int currPosition, final boolean reset) {
+    private void itemMovementEnd(final int oldEmptyPosition, final int newEmptyPosition, final boolean reset) {
         itemAnimator = null;
-
-        updateNeedMoveItemTagIfNeeded(currPosition);
 
         if (reset) {
             ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(-1);
-            //move item even if srcPosition equals with dstPosition, because we want to refresh ListView
-            ((CommonDragSortAdapter) getAdapter()).moveItem(srcPosition, currPosition);
+            //move item even if emptyPosition equals with dstPosition, because we want to refresh ListView
+            ((CommonDragSortAdapter) getAdapter()).moveItem(oldEmptyPosition, newEmptyPosition);
             ((CommonDragSortAdapter) getAdapter()).notifyDataSetChanged();
 
-            srcPosition = -1;
+            emptyPosition = -1;
             dragging = false;
             draggingItemView = null;
             if (draggingItemViewBitmap != null) {
                 draggingItemViewBitmap.recycle();
                 draggingItemViewBitmap = null;
             }
-
         } else {
-            ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(currPosition);
-            ((CommonDragSortAdapter) getAdapter()).moveItem(srcPosition, currPosition);
-            srcPosition = currPosition;
-        }
-    }
+            ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(newEmptyPosition);
+            ((CommonDragSortAdapter) getAdapter()).moveItem(oldEmptyPosition, newEmptyPosition);
+            ((CommonDragSortAdapter) getAdapter()).notifyDataSetChanged();
 
-    private void updateNeedMoveItemTagIfNeeded(int currPosition) {
-        if (currPosition != srcPosition) {
-            int postionDelta = currPosition > srcPosition ? -1 : 1;
-            for (View needMoveItem : needMoveItems) {
-                needMoveItem.setTag(((Integer) needMoveItem.getTag()) + postionDelta);
-            }
+            emptyPosition = newEmptyPosition;
         }
-        //release reference
-        needMoveItems.clear();
-        needMoveItemsOriginalTranslationY.clear();
     }
 
     private boolean scrollListViewIfNeeded(float y) {
@@ -448,41 +367,14 @@ public class DragSortListView extends ListView {
         }
 
         //reorder ListView
-        int currPosition = pointToPosition(((int) ev.getX()), ((int) ev.getY()));
-        int dstPosition = currPosition;
-        if (currPosition == AdapterView.INVALID_POSITION) {
-            dstPosition = srcPosition;
+        int curPosition = pointToPosition(((int) ev.getX()), ((int) ev.getY()));
+        int dstPosition = curPosition;
+        if (curPosition == AdapterView.INVALID_POSITION) {
+            dstPosition = emptyPosition;
         }
 
-        moveItem(dstPosition, true);
+        moveItems(emptyPosition, dstPosition, true);
     }
-/*
-
-    private void reorderListView(MotionEvent ev) {
-        // reorder
-        int currPosition = pointToPosition(((int) ev.getX()), ((int) ev.getY()));
-        if (currPosition == AdapterView.INVALID_POSITION){
-//            dstPosition = srcPosition;
-            return;
-        }
-//        int dstPosition = currPosition;
-        if (ev.getAction() == MotionEvent.ACTION_MOVE) {
-            if (currPosition == srcPosition){
-                return;
-            }
-            ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(currPosition);
-            ((CommonDragSortAdapter) getAdapter()).moveItem(srcPosition, currPosition);
-            srcPosition = currPosition;
-        } else {
-            //ACTION_UP ACTION_CANCEL
-            ((CommonDragSortAdapter) getAdapter()).setDragSrcPosition(-1);
-            ((CommonDragSortAdapter) getAdapter()).moveItem(srcPosition, currPosition);
-            srcPosition = -1;
-//            invalidate();
-        }
-    }
-
-*/
 
     @Override
     protected void onDraw(Canvas canvas) {

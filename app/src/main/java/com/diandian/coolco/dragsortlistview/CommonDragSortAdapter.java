@@ -47,7 +47,6 @@ public class CommonDragSortAdapter<T> extends BaseAdapter {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
 
-        Log.e("", "getView " + position);
         CommonViewHolder<T> holder = null;
 //        if (convertView == null) {
         convertView = LayoutInflater.from(context).inflate(layout, parent, false);

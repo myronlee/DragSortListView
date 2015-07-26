@@ -12,13 +12,15 @@
         android:layout_marginLeft="12dp" />
 
     <view
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="72dp"
+        android:layout_height="match_parent"
         class="com.malinskiy.materialicons.widget.IconTextView"
         android:id="@id/tv_drag_handler"
         android:layout_centerVertical="true"
         android:layout_alignParentRight="true"
         android:text="{md_dehaze}"
-        android:textSize="24dp"
-        android:layout_marginRight="12dp" />
+        android:textSize="24sp"
+        android:gravity="center"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"/>
 </RelativeLayout>
