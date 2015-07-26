@@ -56,11 +56,11 @@ public class DragSortListView extends ListView {
     /**
      * when user's finger is up to this boundary, scroll down the ListView
      */
-    private float scrollDownBoundary;
+    private float topBoundary;
     /**
      * when user's finger is below to this boundary, scroll up the ListView
      */
-    private float scrollUpBoundary;
+    private float bottomBoundary;
     private int draggingItemHeight;
     private ValueAnimator itemAnimator;
     private long duration = 300;
@@ -86,8 +86,8 @@ public class DragSortListView extends ListView {
     }
 
     private void init() {
-        scrollDownBoundary = getHeight() * 0.25f;
-        scrollUpBoundary = getHeight() * 0.75f;
+        topBoundary = getHeight() * 0.25f;
+        bottomBoundary = getHeight() * 0.75f;
 
         draggingItemViewBitmapPaint = new Paint();
         draggingItemViewBitmapPaint.setAlpha(0x88);
@@ -316,32 +316,21 @@ public class DragSortListView extends ListView {
     private boolean scrollListViewIfNeeded(float y) {
 
         //the distance you want to scroll ListView
-        float dy = 0;
-        if (y < scrollDownBoundary && !reachTop()) {
-            dy = (scrollDownBoundary - y) / 10;
-        } else if (y > scrollUpBoundary && !reachBottom()) {
-            dy = (scrollUpBoundary - y) / 10;
+        int dy = 0;
+        if (y < topBoundary && !reachTop()) {
+            dy = (int) ((topBoundary - y) / 10);
+        } else if (y > bottomBoundary && !reachBottom()) {
+            dy = (int) ((bottomBoundary - y) / 10);
         }
 
         if (dy == 0) {
+            //tell the event handler, i am not scrolling the ListView , you can move items if you want
             return false;
-        }
-
-        //scroll down
-        if (dy > 0) {
-            View firstVisibleItemView = getChildAt(0);
-            setSelectionFromTop(getFirstVisiblePosition(), ((int) (firstVisibleItemView.getTop() + dy)));
+        } else {
+            //tell the event handler, i am scrolling the ListView , do not move items
+            setSelectionFromTop(getFirstVisiblePosition(), getChildAt(0).getTop()+dy);
             return true;
         }
-
-        //scroll up
-        if (dy < 0) {
-            View lastVisibleItemView = getChildAt(getLastVisiblePosition() - getFirstVisiblePosition() - 1);
-            setSelectionFromTop(getLastVisiblePosition(), ((int) (lastVisibleItemView.getTop() + dy)));
-            return true;
-        }
-
-        return false;
     }
 
     private boolean reachTop() {
@@ -352,7 +341,6 @@ public class DragSortListView extends ListView {
     }
 
     private boolean reachBottom() {
-
         if (getLastVisiblePosition() == getAdapter().getCount() - 1 && getChildAt(getChildCount() - 1).getBottom() <= getHeight()) {
             return true;
         }
