@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.TextView;
 
 import java.util.List;
 
@@ -47,35 +48,35 @@ public class CommonDragSortAdapter<T> extends BaseAdapter {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
 
-        CommonViewHolder<T> holder = null;
+//        CommonViewHolder<T> holder = null;
 //        if (convertView == null) {
         convertView = LayoutInflater.from(context).inflate(layout, parent, false);
+        ((TextView) ((ViewGroup) convertView).getChildAt(0)).setText((CharSequence) datas.get(position));
+
+//            try {
+//                holder = viewHolderClazz.getDeclaredConstructor(View.class).newInstance(convertView);
+//            } catch (NoSuchMethodException e) {
+//                e.printStackTrace();
+//                Log.e(TAG, e.toString());
+//            } catch (SecurityException e) {
+//                e.printStackTrace();
+//                Log.e(TAG, e.toString());
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                Log.e(TAG, e.toString());
+//            }
+
+//            convertView.setTag(holder);
+//        } else {
+//            convertView.setVisibility(View.VISIBLE);
+//            holder = (CommonViewHolder<T>) convertView.getTag();
+//        }
+
+//        holder.setItem(datas.get(position));
 
         if (position == dragSrcPosition) {
             convertView.setVisibility(View.INVISIBLE);
-            return convertView;
         }
-
-        try {
-            holder = viewHolderClazz.getDeclaredConstructor(View.class).newInstance(convertView);
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-            Log.e(TAG, e.toString());
-        } catch (SecurityException e) {
-            e.printStackTrace();
-            Log.e(TAG, e.toString());
-        } catch (Exception e) {
-            e.printStackTrace();
-            Log.e(TAG, e.toString());
-        }
-
-//        convertView.setTag(holder);
-//        } else {
-//            holder = (CommonViewHolder<T>) convertView.getTag();
-//        }
-        holder.setItem(datas.get(position));
-
-        convertView.setTag(position);
 
         return convertView;
     }
@@ -107,7 +108,7 @@ public class CommonDragSortAdapter<T> extends BaseAdapter {
     }
 
     public void moveItem(int srcPosition, int dstPosition) {
-        if (srcPosition == dstPosition){
+        if (srcPosition == dstPosition) {
             notifyDataSetChanged();
 //            notifyDataSetInvalidated();
             return;

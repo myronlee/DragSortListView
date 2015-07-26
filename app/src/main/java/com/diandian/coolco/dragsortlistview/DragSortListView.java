@@ -219,17 +219,23 @@ public class DragSortListView extends ListView {
     private void initNeedMoveItems(int oldEmptyPosition, int newEmptyPosition) {
         needMoveItems.clear();
 
-
         if (newEmptyPosition > oldEmptyPosition) {
             for (int i = oldEmptyPosition + 1; i <= newEmptyPosition; i++) {
-                needMoveItems.add(getChildAt(i - getFirstVisiblePosition()));
+                addItemIfNotNull(i);
             }
         } else {
             for (int i = newEmptyPosition; i < oldEmptyPosition; i++) {
-                needMoveItems.add(getChildAt(i - getFirstVisiblePosition()));
+                addItemIfNotNull(i);
             }
         }
 
+    }
+
+    private void addItemIfNotNull(int i) {
+        View item = getChildAt(i - getFirstVisiblePosition());
+        if (item != null) {
+            needMoveItems.add(item);
+        }
     }
 
     /**
@@ -347,7 +353,7 @@ public class DragSortListView extends ListView {
 
     private boolean listViewCanScrollUp() {
 
-        if (getLastVisiblePosition() == getAdapter().getCount() - 1 && getChildAt(getCount() - 1).getBottom() <= getHeight()) {
+        if (getLastVisiblePosition() == getAdapter().getCount() - 1 && getChildAt(getChildCount() - 1).getBottom() <= getHeight()) {
             return false;
         }
         return true;

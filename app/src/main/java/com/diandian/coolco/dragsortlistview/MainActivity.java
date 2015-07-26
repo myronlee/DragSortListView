@@ -31,7 +31,7 @@ public class MainActivity extends ActionBarActivity {
 //        String[] testTitleStrArray = new String[]{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19"};
 //        new ArrayList<String>(Arrays.asList(testTitleStrArray))
         List<String> testTitleStrList = new ArrayList<>();
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < 30; i++) {
             testTitleStrList.add(i+"");
         }
         BaseAdapter adapter = new CommonDragSortAdapter<>(this, R.layout.list_item, testTitleStrList, TitleViewHolder.class);
