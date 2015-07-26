@@ -317,9 +317,9 @@ public class DragSortListView extends ListView {
 
         //the distance you want to scroll ListView
         float dy = 0;
-        if (y < scrollDownBoundary && listViewCanScrollDown()) {
+        if (y < scrollDownBoundary && !reachTop()) {
             dy = (scrollDownBoundary - y) / 10;
-        } else if (y > scrollUpBoundary && listViewCanScrollUp()) {
+        } else if (y > scrollUpBoundary && !reachBottom()) {
             dy = (scrollUpBoundary - y) / 10;
         }
 
@@ -344,19 +344,19 @@ public class DragSortListView extends ListView {
         return false;
     }
 
-    private boolean listViewCanScrollDown() {
+    private boolean reachTop() {
         if (getFirstVisiblePosition() == 0 && getChildAt(0).getTop() >= 0) {
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
-    private boolean listViewCanScrollUp() {
+    private boolean reachBottom() {
 
         if (getLastVisiblePosition() == getAdapter().getCount() - 1 && getChildAt(getChildCount() - 1).getBottom() <= getHeight()) {
-            return false;
+            return true;
         }
-        return true;
+        return false;
     }
 
 
