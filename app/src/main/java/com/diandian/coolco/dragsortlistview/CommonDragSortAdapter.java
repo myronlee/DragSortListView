@@ -46,6 +46,8 @@ public class CommonDragSortAdapter<T> extends BaseAdapter {
      */
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
+
+        Log.e("", "getView " + position);
         CommonViewHolder<T> holder = null;
 //        if (convertView == null) {
         convertView = LayoutInflater.from(context).inflate(layout, parent, false);
@@ -73,6 +75,9 @@ public class CommonDragSortAdapter<T> extends BaseAdapter {
 //            holder = (CommonViewHolder<T>) convertView.getTag();
 //        }
         holder.setItem(datas.get(position));
+
+        convertView.setTag(position);
+
         return convertView;
     }
 
@@ -111,7 +116,7 @@ public class CommonDragSortAdapter<T> extends BaseAdapter {
         T movingItem = datas.get(srcPosition);
         datas.remove(srcPosition);
         datas.add(dstPosition, movingItem);
-        notifyDataSetChanged();
+//        notifyDataSetChanged();
     }
 
     /**
