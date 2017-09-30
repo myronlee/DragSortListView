@@ -92,7 +92,7 @@ public class DragSortListView extends ListView {
         draggingItemViewBitmapPaint = new Paint();
         draggingItemViewBitmapPaint.setAlpha(0x88);
 
-        setLayerType(View.LAYER_TYPE_HARDWARE, null);//硬件加速
+        setLayerType(View.LAYER_TYPE_HARDWARE, null); //hardware acceleration
 
         needMoveItems = new ArrayList<View>();
     }
@@ -254,7 +254,9 @@ public class DragSortListView extends ListView {
 
         initNeedMoveItems(oldEmptyPosition, newEmptyPosition);
 
-        itemAnimator = newEmptyPosition > oldEmptyPosition ? ValueAnimator.ofFloat(0, -draggingItemHeight) : ValueAnimator.ofFloat(0, draggingItemHeight);//currPosition > srcPosition则向上移动itemView
+        itemAnimator = newEmptyPosition > oldEmptyPosition 
+            ? ValueAnimator.ofFloat(0, -draggingItemHeight - getDividerHeight()) 
+            : ValueAnimator.ofFloat(0, draggingItemHeight + getDividerHeight()); //when currPosition > srcPosition, move up itemView
         itemAnimator.setDuration(duration);
         itemAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
